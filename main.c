@@ -37,6 +37,19 @@ int main(int argc, char *argv[]) {
   printf("SDL3 Initialized successfully!\n");
   printf("Press ESC or close window to quit\n");
 
+  SDL_FRect dirt_block = {.x = 100, .y = 100, .w = 32, .h = 32};
+
+  SDL_FRect rock = {.x = 150, .y = 100, .w = 32, .h = 32};
+  SDL_FRect tunnel = {.x = 200, .y = 100, .w = 32, .h = 32};
+
+  // create a row of dirt blocks
+  SDL_FRect dirt_row[5];
+  for (int i = 0; i < 5; i++) {
+    dirt_row[i].x = 100 + (i * 32); // space them 32 pixels apart
+    dirt_row[i].y = 200;
+    dirt_row[i].w = 32;
+    dirt_row[i].h = 32;
+  }
   // Game loop control
   bool running = true;
   SDL_Event event;
@@ -56,9 +69,22 @@ int main(int argc, char *argv[]) {
       }
     }
     // clear screen with a color (R,G,B,A)
-    SDL_SetRenderDrawColor(renderer, 0, 50, 100, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
+    SDL_SetRenderDrawColor(renderer, 139, 69, 19, 255);
+    SDL_RenderFillRect(renderer, &dirt_block);
+
+    SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
+    SDL_RenderFillRect(renderer, &rock);
+
+    SDL_SetRenderDrawColor(renderer, 50, 25, 10, 255);
+    SDL_RenderFillRect(renderer, &tunnel);
+
+    SDL_SetRenderDrawColor(renderer, 139, 69, 19, 255);
+    for (int i = 0; i < 5; i++) {
+      SDL_RenderFillRect(renderer, &dirt_row[i]);
+    }
     // Display what we draw
     SDL_RenderPresent(renderer);
 
