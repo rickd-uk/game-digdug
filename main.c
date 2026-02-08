@@ -1,11 +1,10 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_render.h>
-#include <SDL3/SDL_video.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-#define WIDTH 640
-#define HEIGHT 480
+#include "grid.h"
+#include "render.h"
+#include "types.h"
 
 int main(int argc, char *argv[]) {
   // initialize SDL3
@@ -15,7 +14,7 @@ int main(int argc, char *argv[]) {
   }
   // create window
   SDL_Window *window =
-      SDL_CreateWindow("Dig dug - Step 1: Window", WIDTH, HEIGHT,
+      SDL_CreateWindow("Dig dug - Step 1: Window", SCREEN_WIDTH, SCREEN_HEIGHT,
                        0 // Flags
       );
   if (!window) {
@@ -37,19 +36,9 @@ int main(int argc, char *argv[]) {
   printf("SDL3 Initialized successfully!\n");
   printf("Press ESC or close window to quit\n");
 
-  SDL_FRect dirt_block = {.x = 100, .y = 100, .w = 32, .h = 32};
+  TileType grid[GRID_HEIGHT][GRID_WIDTH];
+  grid_init(grid);
 
-  SDL_FRect rock = {.x = 150, .y = 100, .w = 32, .h = 32};
-  SDL_FRect tunnel = {.x = 200, .y = 100, .w = 32, .h = 32};
-
-  // create a row of dirt blocks
-  SDL_FRect dirt_row[5];
-  for (int i = 0; i < 5; i++) {
-    dirt_row[i].x = 100 + (i * 32); // space them 32 pixels apart
-    dirt_row[i].y = 200;
-    dirt_row[i].w = 32;
-    dirt_row[i].h = 32;
-  }
   // Game loop control
   bool running = true;
   SDL_Event event;
@@ -72,20 +61,10 @@ int main(int argc, char *argv[]) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    SDL_SetRenderDrawColor(renderer, 139, 69, 19, 255);
-    SDL_RenderFillRect(renderer, &dirt_block);
+    // Display the entire grid
+    render_draw_grid(renderer, grid);
 
-    SDL_SetRenderDrawColor(renderer, 128, 128, 128, 255);
-    SDL_RenderFillRect(renderer, &rock);
-
-    SDL_SetRenderDrawColor(renderer, 50, 25, 10, 255);
-    SDL_RenderFillRect(renderer, &tunnel);
-
-    SDL_SetRenderDrawColor(renderer, 139, 69, 19, 255);
-    for (int i = 0; i < 5; i++) {
-      SDL_RenderFillRect(renderer, &dirt_row[i]);
-    }
-    // Display what we draw
+    // Present
     SDL_RenderPresent(renderer);
 
     // Small delay to not max out CPU

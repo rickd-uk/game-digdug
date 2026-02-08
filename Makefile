@@ -8,7 +8,7 @@ CFLAGS += $(shell pkg-config --cflags sdl3)
 TARGET = digdug
 
 # Source files
-SOURCES = main.c
+SOURCES = main.c grid.c render.c
 OBJECTS = $(SOURCES:.c=.o)
 
 # Default target
