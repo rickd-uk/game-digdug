@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "grid.h"
+#include "player.h"
 #include "render.h"
 #include "types.h"
 
@@ -39,6 +40,9 @@ int main(int argc, char *argv[]) {
   TileType grid[GRID_HEIGHT][GRID_WIDTH];
   grid_init(grid);
 
+  Player player;
+  player_init(&player, 10, 2);
+
   // Game loop control
   bool running = true;
   SDL_Event event;
@@ -54,15 +58,31 @@ int main(int argc, char *argv[]) {
         // user pressed a key
         if (event.key.key == SDLK_ESCAPE) {
           running = false;
+        } else if (event.key.key == SDLK_UP) {
+          player_move(&player, DIR_UP, grid);
+        } else if (event.key.key == SDLK_DOWN) {
+          player_move(&player, DIR_DOWN, grid);
+        } else if (event.key.key == SDLK_LEFT) {
+          player_move(&player, DIR_LEFT, grid);
+        } else if (event.key.key == SDLK_RIGHT) {
+          player_move(&player, DIR_RIGHT, grid);
         }
       }
     }
+
+    // ========= UPDATE (game Logic) ===========
+
+    // ========= RENDER ========================
+
     // clear screen with a color (R,G,B,A)
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
     // Display the entire grid
     render_draw_grid(renderer, grid);
+
+    // Draw player on top
+    render_draw_player(renderer, &player);
 
     // Present
     SDL_RenderPresent(renderer);

@@ -1,4 +1,7 @@
+#include "player.h"
 #include "render.h"
+#include "types.h"
+#include <SDL3/SDL_render.h>
 
 void render_get_tile_color(TileType type, int *r, int *g, int *b) {
   switch (type) {
@@ -53,4 +56,55 @@ void render_draw_grid(SDL_Renderer *renderer,
       SDL_RenderFillRect(renderer, &tile);
     }
   }
+}
+
+void render_draw_player(SDL_Renderer *renderer, Player *player) {
+  SDL_FRect player_rect;
+
+  // get pixel pos
+  int x, y;
+  player_get_pixel_pos(player, &x, &y);
+
+  player_rect.x = x;
+  player_rect.y = y;
+  player_rect.w = TILE_SIZE;
+  player_rect.h = TILE_SIZE;
+
+  // draw player as white square
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  SDL_RenderFillRect(renderer, &player_rect);
+
+  // draw a small colored square inside to show dir
+  SDL_FRect dir_indicator;
+  dir_indicator.w = TILE_INDICATOR_SIZE;
+  dir_indicator.h = TILE_INDICATOR_SIZE;
+
+  // pos indicator based on facing dir
+  switch (player->facing) {
+  case DIR_UP:
+    dir_indicator.x = x + TILE_INDICATOR_SIZE;
+    dir_indicator.y = y + TILE_INDICATOR_OFFSET;
+    break;
+
+  case DIR_DOWN:
+    dir_indicator.x = x + TILE_INDICATOR_SIZE;
+    dir_indicator.y =
+        y + TILE_SIZE - TILE_INDICATOR_OFFSET - TILE_INDICATOR_SIZE;
+    break;
+
+  case DIR_LEFT:
+    dir_indicator.x = x + TILE_INDICATOR_OFFSET;
+    dir_indicator.y = y + TILE_INDICATOR_SIZE;
+    break;
+
+  case DIR_RIGHT:
+    dir_indicator.x =
+        x + TILE_SIZE - TILE_INDICATOR_OFFSET - TILE_INDICATOR_SIZE;
+    dir_indicator.y = y + TILE_INDICATOR_SIZE;
+    break;
+  }
+
+  // draw dir indicator in cyan
+  SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+  SDL_RenderFillRect(renderer, &dir_indicator);
 }

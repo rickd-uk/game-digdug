@@ -1,15 +1,17 @@
 # Compiler and flags
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -g
-LDFLAGS = $(shell pkg-config --libs sdl3)
-CFLAGS += $(shell pkg-config --cflags sdl3)
+LDFLAGS = -lSDL3
 
 # Target executable
 TARGET = digdug
 
-# Source files
-SOURCES = main.c grid.c render.c
-OBJECTS = $(SOURCES:.c=.o)
+# Source files - add new .c files here!
+SOURCES = main.c grid.c render.c player.c
+OBJECTS = main.o grid.o render.o player.o
+
+# Header dependencies (if you change a .h file, rebuild)
+HEADERS = types.h grid.h render.h player.h
 
 # Default target
 all: $(TARGET)
@@ -19,9 +21,18 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
 	@echo "Build complete! Run with: ./$(TARGET)"
 
-# Compile source files
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+# Compile each .c file to .o file
+main.o: main.c $(HEADERS)
+	$(CC) $(CFLAGS) -c main.c -o main.o
+
+grid.o: grid.c $(HEADERS)
+	$(CC) $(CFLAGS) -c grid.c -o grid.o
+
+render.o: render.c $(HEADERS)
+	$(CC) $(CFLAGS) -c render.c -o render.o
+
+player.o: player.c $(HEADERS)
+	$(CC) $(CFLAGS) -c player.c -o player.o
 
 # Clean build files
 clean:
@@ -37,5 +48,8 @@ info:
 	@echo "CC: $(CC)"
 	@echo "CFLAGS: $(CFLAGS)"
 	@echo "LDFLAGS: $(LDFLAGS)"
+	@echo "SOURCES: $(SOURCES)"
+	@echo "OBJECTS: $(OBJECTS)"
+	@echo "HEADERS: $(HEADERS)"
 
 .PHONY: all clean run info
