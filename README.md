@@ -1,211 +1,435 @@
 # Dig Dug Clone - Learning SDL3 Step by Step
 
-## Step 3: Modular Code Structure
+## About Dig Dug
 
-### What You're Learning - Code Organization!
+**Dig Dug** is a classic arcade game from 1982 where you tunnel through underground dirt to hunt monsters. You defeat enemies by inflating them with your air pump until they explode. The game features Pookas (red balloon-like monsters) and Fygars (green fire-breathing dragons). As you dig, rocks can fall and crush enemies. The deeper you go, the more points you earn!
+
+This project recreates Dig Dug from scratch using SDL3 and C, teaching fundamental game programming concepts step-by-step.
+
+---
+
+## Current Progress
+
+✅ **Step 1**: SDL3 window and game loop  
+✅ **Step 2**: Drawing rectangles (tile building blocks)  
+✅ **Step 3**: Full tile grid system + modular code structure  
+⬜ **Step 4**: Player character with keyboard movement  
+⬜ **Step 5**: Digging mechanics (coming next!)  
+⬜ **Step 5**: Digging mechanics (coming next!)  
+⬜ **Step 6**: Enemies and AI  
+⬜ **Step 7**: Air pump weapon  
+⬜ **Step 8**: Rocks and physics  
+⬜ **Step 9**: Score and game states  
+
+---
+
+## Step 1: Understanding the Basics
+
+**Goal:** Create a window, understand the game loop, and handle basic events.
+
+### What You Learned
+
+1. **SDL3 Initialization**
+   - `SDL_Init(SDL_INIT_VIDEO)` - Must be called first
+   - Always check for errors with `SDL_GetError()`
+
+2. **Core Objects**
+   - `SDL_Window` - Your game window
+   - `SDL_Renderer` - The thing that draws to the window
+   - Think: Window = canvas, Renderer = paintbrush
+
+3. **The Game Loop** (Most Important!)
+   ```c
+   while (game is running):
+       1. Handle Input (keyboard, mouse, close button)
+       2. Update Game State (movement, collisions)
+       3. Render (draw everything)
+       4. Delay (control frame rate)
+   ```
+
+4. **Event Handling**
+   - `SDL_PollEvent()` - Check for events in a loop
+   - `SDL_EVENT_QUIT` - User closed window
+   - `SDL_EVENT_KEY_DOWN` - Key pressed
+
+5. **Basic Rendering**
+   - `SDL_SetRenderDrawColor()` - Choose a color
+   - `SDL_RenderClear()` - Fill screen with color
+   - `SDL_RenderPresent()` - Show what you drew (like flipping pages)
+
+### Key Concepts
+
+**Frame Rate Control:**
+- `SDL_Delay(16)` ≈ 60 FPS (1000ms / 60 = 16.67ms)
+- Too high = slow, too low = CPU maxed
+
+**Cleanup Order:**
+- Destroy in REVERSE order of creation
+- Renderer before Window before SDL_Quit()
+
+---
+
+## Step 2: Drawing Rectangles (Tile Basics!)
+
+**Goal:** Learn to draw rectangles - the building blocks of all tiles.
+
+### What You Learned
+
+1. **SDL_FRect Structure**
+   ```c
+   SDL_FRect rect = {
+       .x = 100,    // Position from left edge
+       .y = 100,    // Position from top edge
+       .w = 32,     // Width in pixels
+       .h = 32      // Height in pixels
+   };
+   ```
+   - This defines ONE rectangle (future: ONE tile)
+   - `SDL_FRect` uses floats for smooth movement
+
+2. **SDL_RenderFillRect()**
+   - Draws a filled rectangle
+   - Must set color BEFORE calling this
+   ```c
+   SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);  // Red
+   SDL_RenderFillRect(renderer, &rect);               // Draw it
+   ```
+
+3. **Drawing Multiple Shapes**
+   - Use arrays to store multiple rectangles
+   - Use loops to draw them efficiently
+   - This is how we'll make our tile grid!
+
+4. **RGB Colors**
+   - RGB = Red, Green, Blue (0-255 each)
+   - Brown dirt: (139, 69, 19)
+   - Gray rock: (128, 128, 128)
+
+### Key Insight
+
+Drawing order matters! Things drawn first appear BEHIND later things, like painting layers.
+
+---
+
+## Step 3: Full Tile Grid System & Modular Code
+
+**Goal:** Create a complete tile-based world and organize code into modules.
+
+### Code Structure
 
 The code is now split into **modules** - this is how real games are organized!
 
-**File Structure:**
 ```
 digdug/
 ├── main.c           - Game loop and SDL initialization
 ├── types.h          - Shared types and constants
 ├── grid.h/grid.c    - Grid logic (init, get, set tiles)
 ├── render.h/render.c - All rendering code
+├── player.h/player.c - Player logic and movement
 ├── Makefile         - Builds everything together
 └── README.md        - This file!
 ```
 
-### Why Split Files?
+### What You Learned
 
-**Before (1 file):**
-- Hard to find things
-- Changes affect everything
-- Can't reuse code easily
-
-**After (modules):**
-- ✅ Each file has ONE job
-- ✅ Easy to find code
-- ✅ Can reuse modules in other projects
-- ✅ Multiple people can work on different parts
-- ✅ Changes to render.c don't affect grid.c
-
-### The Files Explained
-
-**1. types.h** - Shared Definitions
+**1. 2D Arrays - The Game Map**
 ```c
-#define SCREEN_WIDTH 640    // Everyone needs these
-#define TILE_SIZE 32
-typedef enum { TILE_DIRT, ... } TileType;
+TileType grid[GRID_HEIGHT][GRID_WIDTH];
+// grid[row][column] = grid[y][x]
 ```
-- Constants used everywhere
-- Type definitions (enums, structs)
-- Include guards prevent double-inclusion
+- This is your entire game world in memory (20×15 = 300 tiles)
+- Each cell holds a tile type
+- Think of it like a spreadsheet
 
-**2. grid.h / grid.c** - Grid Logic
+**2. Enums - Tile Types**
 ```c
-void grid_init(...)        // Set up initial level
-TileType grid_get_tile(...) // Read a tile
-void grid_set_tile(...)    // Change a tile
+typedef enum {
+    TILE_EMPTY = 0,   // Black - nothing there
+    TILE_DIRT,        // Brown - solid dirt
+    TILE_TUNNEL,      // Dark brown - dug out path
+    TILE_ROCK         // Gray - falling rock
+} TileType;
 ```
-- Everything about the game world
-- No rendering code here!
-- Has bounds checking (safety!)
+- Better than magic numbers (0, 1, 2, 3)
+- Makes code readable
+- Easy to add new types
 
-**3. render.h / render.c** - Drawing
+**3. Nested Loops - Drawing Everything**
 ```c
-void render_get_tile_color(...)  // Colors for tiles
-void render_draw_grid(...)        // Draw everything
-```
-- All SDL rendering code
-- Knows about grid, but grid doesn't know about render!
-- One-way dependency: render → grid
-
-**4. main.c** - The Boss
-```c
-main() {
-    init SDL
-    create grid
-    game loop:
-        handle input
-        update (later!)
-        render
-    cleanup
+for (int row = 0; row < GRID_HEIGHT; row++) {
+    for (int col = 0; col < GRID_WIDTH; col++) {
+        // Draw tile at grid[row][col]
+    }
 }
 ```
-- Coordinates everything
-- Minimal code - just the loop
-- Calls functions from other modules
+- Outer loop = rows (top to bottom)
+- Inner loop = columns (left to right)
+- This pattern is used in EVERY tile-based game!
 
-### Header Guards - Important Concept!
+**4. Grid-to-Pixel Conversion**
+```c
+pixel_x = col * TILE_SIZE;  // Column 5 → pixel 160
+pixel_y = row * TILE_SIZE;  // Row 3 → pixel 96
+```
+
+**5. Modular Architecture**
+- **types.h** - Shared definitions everyone needs
+- **grid.c** - World logic (no rendering!)
+- **render.c** - Drawing logic (no game rules!)
+- **main.c** - Coordinates everything
+
+### Header Guards - Important!
 
 Every .h file has:
 ```c
-#ifndef TYPES_H      // If not defined
-#define TYPES_H      // Define it
+#ifndef TYPES_H
+#define TYPES_H
 // ... code ...
-#endif               // End if
+#endif
 ```
 
-**Why?** Prevents including the same file twice:
-```c
-// Without guards - ERROR!
-#include "types.h"  
-#include "grid.h"   // grid.h also includes types.h
-// TileType defined twice = compiler error!
-
-// With guards - OK!
-// First include: defines TileType
-// Second include: skipped (already defined)
-```
-
-### Building Multiple Files
-
-The Makefile handles this:
-```makefile
-SOURCES = main.c grid.c render.c
-OBJECTS = main.o grid.o render.o
-
-# Compiles each .c to .o
-# Links all .o files together
-```
+**Why?** Prevents including the same file twice and getting compiler errors.
 
 ### Compilation Process
 
 ```
-1. main.c    → main.o    (includes types.h, grid.h, render.h)
+1. main.c    → main.o    (includes types.h, grid.h, render.h, player.h)
 2. grid.c    → grid.o    (includes types.h, grid.h)
-3. render.c  → render.o  (includes types.h, render.h)
-4. Link all .o files → digdug executable
+3. render.c  → render.o  (includes types.h, render.h, player.h)
+4. player.c  → player.o  (includes types.h, player.h, grid.h)
+5. Link all .o files → digdug executable
 ```
 
 If you change **types.h**, ALL files recompile.
 If you change **render.c**, only render.c recompiles.
-
-### Build and Run
-
-```bash
-make clean   # Remove old builds
-make         # Compile everything
-./digdug     # Run!
-
-# Or just:
-make run
-```
-
-### Experiments
-
-1. **Add a new tile type:**
-   - Edit `types.h`: Add `TILE_WATER` to enum
-   - Edit `render.c`: Add color case (0, 100, 255)
-   - Edit `grid.c`: Place some water tiles
-
-2. **Add a new function:**
-   - In `grid.h`: Declare `void grid_clear(TileType grid[...]);`
-   - In `grid.c`: Implement it (set all to TILE_EMPTY)
-   - In `main.c`: Call it before grid_init()
-
-3. **See dependencies:**
-   ```bash
-   make clean
-   make
-   # Watch order: main.o, grid.o, render.o, then link
-   ```
-
-4. **Test header guards:**
-   - Try removing `#ifndef` from types.h
-   - See compiler error about redefinition
-   - Put it back!
-
-### Understanding the Flow
-
-**Reading Code:**
-1. Start with main.c
-2. See `grid_init()` call? Go to grid.h to see declaration
-3. Want details? Go to grid.c to see implementation
-4. See `render_draw_grid()`? Follow same pattern
-
-**Adding Features:**
-1. Think: "What module does this belong in?"
-2. Grid logic? → grid.c
-3. Drawing? → render.c  
-4. Neither? → Maybe new module?
 
 ### Key Programming Concepts
 
 **Separation of Concerns:**
 - Grid module: "What is the world?"
 - Render module: "How do we show it?"
+- Player module: "How does the player behave?"
 - Main: "How does it all work together?"
 
 **Single Responsibility:**
 - Each .c file has ONE job
-- grid.c manages the world
-- render.c draws things
-- Don't mix jobs!
+- Don't mix logic and rendering
+- Makes code easier to understand and modify
 
-**Interface (header) vs Implementation (source):**
-- `.h` = "What can I do?" (declarations)
-- `.c` = "How do I do it?" (definitions)
-- Users only need to read .h files
+**Interface vs Implementation:**
+- `.h` files = "What can I do?" (declarations)
+- `.c` files = "How do I do it?" (definitions)
 
-### Questions to Answer
+---
 
-1. If you change TILE_SIZE in types.h, what files recompile?
-2. Can grid.c call render functions? Should it?
-3. Where would you add a `grid_count_dirt()` function?
-4. Why does main.c include grid.h AND render.h?
-5. What happens if you forget to add a new .c file to the Makefile?
+## Step 4: Player Character & Movement
 
-## What's Next
+**Goal:** Add a controllable character with keyboard movement and collision detection.
 
-Now that the code is organized, we can add features easily:
+### What You Learned
 
-- **Step 4**: Input handling module (keyboard/mouse)
-- **Step 5**: Player module (character, movement)
-- **Step 6**: Game logic module (digging, collisions)
+**1. Structs - Game Entities**
+```c
+typedef struct {
+    int col;              // Grid position X
+    int row;              // Grid position Y
+    Direction facing;     // Which way player faces
+    bool is_alive;        // Game state
+} Player;
+```
+- Structs group related data together
+- Like creating your own custom type
+- Every game entity uses structs
 
-Clean code makes adding features easy!
+**2. Enums for Direction**
+```c
+typedef enum {
+    DIR_UP,
+    DIR_DOWN,
+    DIR_LEFT,
+    DIR_RIGHT
+} Direction;
+```
 
-This structure is used in REAL game engines. You're learning industry practices!
+**3. Collision Detection**
+```c
+bool can_move_to(TileType tile) {
+    return (tile == TILE_EMPTY || tile == TILE_TUNNEL);
+}
+```
+- Check BEFORE moving
+- Prevents walking through walls
+- Returns true/false for valid moves
+
+**4. Grid-Based Movement**
+- Player stores grid position (col, row)
+- Movement = change col or row by 1
+- Convert to pixels for rendering
+
+**5. Input Handling for Gameplay**
+```c
+if (event.key.key == SDLK_UP) {
+    player_move(&player, DIR_UP, grid);
+}
+```
+- Arrow keys mapped to directions
+- Each keypress attempts a move
+- Move fails if blocked
+
+### Player Movement Flow
+
+```
+1. User presses arrow key
+2. Calculate new position (col±1, row±1)
+3. Check if new position is in bounds
+4. Check if destination tile is walkable
+5. If valid: update player position
+6. If blocked: stay in place
+```
+
+### Player Rendering
+
+The player is drawn as:
+- **White square** - the main body
+- **Cyan indicator** - shows which direction facing
+- Later we'll replace with actual sprites!
+
+### Controls
+
+- **Arrow Keys**: Move Dig Dug
+- **ESC**: Quit
+
+---
+
+## Building and Running
+
+```bash
+# Clean old builds
+make clean
+
+# Compile everything
+make
+
+# Run the game
+./digdug
+
+# Or compile and run in one command
+make run
+```
+
+### Manual Compilation (if needed)
+
+```bash
+# Compile each source file
+gcc -Wall -Wextra -std=c11 -g -c main.c -o main.o
+gcc -Wall -Wextra -std=c11 -g -c grid.c -o grid.o
+gcc -Wall -Wextra -std=c11 -g -c render.c -o render.o
+gcc -Wall -Wextra -std=c11 -g -c player.c -o player.o
+
+# Link everything together
+gcc main.o grid.o render.o player.o -lSDL3 -o digdug
+```
+
+---
+
+## Experiments to Try
+
+1. **Add a new tile type:**
+   - Edit `types.h`: Add `TILE_WATER` to enum
+   - Edit `render.c`: Add color case (0, 100, 255)
+   - Edit `grid.c`: Place some water tiles
+   - Update collision: Can player walk through water?
+
+2. **Change player speed:**
+   - In `main.c`, change `SDL_Delay(16)` to `SDL_Delay(33)`
+   - Makes game run at 30 FPS instead of 60 FPS
+
+3. **Modify starting level:**
+   - Edit `grid_init()` in `grid.c`
+   - Create different tunnel patterns
+   - Place rocks in different locations
+
+4. **Add debug output:**
+   - In `player_move()`, add:
+   ```c
+   printf("Player at (%d, %d)\n", player->col, player->row);
+   ```
+
+5. **Change colors:**
+   - Edit `render_get_tile_color()` to customize tile colors
+   - Edit `render_draw_player()` to change player color
+
+---
+
+## Key Questions to Understand
+
+1. Why do we use `grid[row][col]` instead of `grid[col][row]`?
+2. What's the difference between grid coordinates and pixel coordinates?
+3. Why do we check collision BEFORE moving the player?
+4. What happens if you remove bounds checking in `player_move()`?
+5. Why does main.c include multiple header files?
+6. What does the `static` keyword mean in `can_move_to()`?
+
+---
+
+## Common Patterns in Game Programming
+
+**Entity Management:**
+- Every game object (player, enemy, bullet) has position, state, behavior
+- Structs hold entity data
+- Functions operate on entities
+
+**Input → Logic → Render Loop:**
+- Input: User pressed key
+- Logic: Update player position
+- Render: Draw player at new position
+- Repeats 60 times per second!
+
+**Collision Before Movement:**
+- Always check if move is valid FIRST
+- Only update position if valid
+- Prevents bugs and glitches
+
+**Grid-Based Movement:**
+- Position stored as grid coordinates
+- Convert to pixels for rendering
+- Simple and predictable
+
+---
+
+## What's Next - Step 5: Digging Mechanics!
+
+Now that you can move, let's add the core Dig Dug gameplay:
+
+- **Dig through dirt** - Turn TILE_DIRT into TILE_TUNNEL as you move
+- **Visual feedback** - See the path you carve
+- **Underground exploration** - Create your own tunnels
+- **Score tracking** - Points for dirt removed
+
+This is where it becomes the actual Dig Dug experience!
+
+---
+
+## Resources
+
+- **SDL3 Documentation**: https://wiki.libsdl.org/SDL3/
+- **Original Dig Dug**: https://en.wikipedia.org/wiki/Dig_Dug
+- **C Programming**: https://en.cppreference.com/
+
+---
+
+## Learning Objectives Summary
+
+✅ SDL3 initialization and cleanup  
+✅ Game loop architecture  
+✅ Event handling (keyboard, window events)  
+✅ 2D rendering with rectangles  
+✅ Tile-based game worlds  
+✅ Multi-file C projects  
+✅ Header guards and includes  
+✅ Structs and enums  
+✅ Grid-based movement  
+✅ Collision detection  
+✅ Modular code organization  
+
+**You're learning real game development patterns used in professional games!**
