@@ -264,10 +264,10 @@ typedef struct {
 **How it works:**
 ```
 First include:
-  MATH_H not defined → enter block → define MATH_H → define Point
+  MATH_H not defined â†’ enter block â†’ define MATH_H â†’ define Point
 
 Second include:
-  MATH_H already defined → skip block → Point not redefined
+  MATH_H already defined â†’ skip block â†’ Point not redefined
 ```
 
 **Alternative - #pragma once:**
@@ -399,17 +399,17 @@ bool player_move(...) {
 ### 1. Game Loop
 ```
 Initialize
-   ↓
-┌─────────────────┐
-│  Handle Input   │
-│       ↓         │
-│  Update State   │ ← Repeat forever
-│       ↓         │
-│     Render      │
-│       ↓         │
-│  Frame Delay    │
-└─────────────────┘
-   ↓
+   â†“
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Handle Input   â”‚
+â”‚       â†“         â”‚
+â”‚  Update State   â”‚ â† Repeat forever
+â”‚       â†“         â”‚
+â”‚     Render      â”‚
+â”‚       â†“         â”‚
+â”‚  Frame Delay    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+   â†“
 Cleanup
 ```
 
@@ -513,7 +513,7 @@ bool player_move(...) {
 ```
 
 **Why this matters:**
-- Same input → different feel based on context
+- Same input â†’ different feel based on context
 - Creates depth and strategy
 - Makes world feel interactive
 
@@ -662,9 +662,9 @@ void render_sprite(Sprite* sprite, Position* pos) {
 **Each module has ONE job:**
 ```
 Input Module: "What did the user do?"
-  ↓
+  â†“
 Logic Module: "What should change?"
-  ↓
+  â†“
 Render Module: "How do we show it?"
 ```
 
@@ -801,26 +801,26 @@ void update() {
 
 **State transitions:**
 ```
-MENU → PLAYING (start game)
-PLAYING → PAUSED (press pause)
-PAUSED → PLAYING (unpause)
-PLAYING → GAME_OVER (player dies)
-GAME_OVER → MENU (restart)
+MENU â†’ PLAYING (start game)
+PLAYING â†’ PAUSED (press pause)
+PAUSED â†’ PLAYING (unpause)
+PLAYING â†’ GAME_OVER (player dies)
+GAME_OVER â†’ MENU (restart)
 ```
 
 ## Compilation and Linking
 
 ### Compilation Process
 ```
-Source Files → Preprocessor → Compiler → Assembler → Linker → Executable
+Source Files â†’ Preprocessor â†’ Compiler â†’ Assembler â†’ Linker â†’ Executable
 
-main.c    ┐
-grid.c    ├→ [Preprocess] → [Compile] → [Assemble] → main.o
-render.c  ┘                                            grid.o
+main.c    â”
+grid.c    â”œâ†’ [Preprocess] â†’ [Compile] â†’ [Assemble] â†’ main.o
+render.c  â”˜                                            grid.o
                                                        render.o
-                                                          ↓
+                                                          â†“
                                                       [Link]
-                                                          ↓
+                                                          â†“
                                                        digdug
 ```
 
@@ -994,20 +994,473 @@ gdb ./main
 (gdb) quit              # Exit GDB
 ```
 
+
+### 11. Entity Arrays
+
+**Managing multiple game objects:**
+```c
+#define MAX_ENEMIES 10
+
+Enemy enemies[MAX_ENEMIES];
+int enemy_count = 0;
+```
+
+**Why arrays for entities?**
+- Fixed-size, stack-allocated
+- Easy to iterate over all entities
+- No memory management needed (for now)
+- Cache-friendly (data in contiguous memory)
+
+**Adding entities:**
+```c
+void spawn_enemy(int col, int row, EnemyType type) {
+    if (enemy_count < MAX_ENEMIES) {
+        enemy_init(&enemies[enemy_count], type, col, row);
+        enemy_count++;
+    }
+}
+```
+
+**Updating all entities:**
+```c
+for (int i = 0; i < enemy_count; i++) {
+    enemy_update(&enemies[i], &player, grid);
+}
+```
+
+**Removing dead entities:**
+```c
+// Swap-and-pop removal (fast, changes order)
+for (int i = 0; i < enemy_count; i++) {
+    if (!enemies[i].is_alive) {
+        enemies[i] = enemies[enemy_count - 1];  // Swap with last
+        enemy_count--;                          // Decrease count
+        i--;                                    // Recheck this index
+    }
+}
+```
+
+**Why swap-and-pop?**
+- O(1) removal (constant time)
+- No need to shift all elements
+- Order doesn't matter for most games
+- Very cache-friendly
+
+**Alternative - maintain order:**
+```c
+// Slower but preserves order
+for (int i = 0; i < enemy_count; i++) {
+    if (!enemies[i].is_alive) {
+        // Shift all subsequent elements left
+        for (int j = i; j < enemy_count - 1; j++) {
+            enemies[j] = enemies[j + 1];
+        }
+        enemy_count--;
+        i--;
+    }
+}
+```
+
+### 12. Random Number Generation
+
+**Basic random numbers:**
+```c
+#include <stdlib.h>
+#include <time.h>
+
+int main() {
+    srand(time(NULL));  // Seed once at startup
+    
+    int random_num = rand();  // 0 to RAND_MAX
+}
+```
+
+**Common patterns:**
+
+**Random in range [0, n):**
+```c
+int random_index = rand() % 10;  // 0 to 9
+int random_col = rand() % GRID_WIDTH;
+```
+
+**Random in range [min, max]:**
+```c
+int random_value = min + rand() % (max - min + 1);
+int random_row = 5 + rand() % 10;  // 5 to 14
+```
+
+**Random boolean (50/50 chance):**
+```c
+bool coin_flip = rand() % 2;  // 0 or 1
+if (rand() % 2) {
+    // 50% chance
+}
+```
+
+**Random percentage chance:**
+```c
+if (rand() % 100 < 30) {
+    // 30% chance
+}
+
+if (rand() % 100 < 75) {
+    // 75% chance
+}
+```
+
+**Random direction:**
+```c
+Direction random_dir = (Direction)(rand() % 4);
+// DIR_UP=0, DIR_DOWN=1, DIR_LEFT=2, DIR_RIGHT=3
+```
+
+**Random enum:**
+```c
+EnemyType random_type = (rand() % 2 == 0) ? ENEMY_POOKA : ENEMY_FYGAR;
+```
+
+**Why seed with time()?**
+```c
+srand(time(NULL));  // Different seed each run
+```
+- time(NULL) returns current time in seconds
+- Different seed = different random sequence
+- Without srand(): same sequence every run (deterministic)
+
+**When NOT to seed:**
+- Testing/debugging (want reproducible behavior)
+- Replays (want same sequence)
+- Network games (need synchronized random)
+
+**Better random (if needed):**
+```c
+// For better randomness, use rand() result as index
+int better_random() {
+    return (rand() ^ (rand() << 15)) % max_value;
+}
+```
+
+### 13. Forward Declarations
+
+**The problem:**
+```c
+// render.h
+#include "player.h"
+#include "enemy.h"
+
+// player.h
+#include "render.h"  // CIRCULAR!
+```
+
+**Solution - forward declare:**
+```c
+// render.h
+typedef struct Player Player;  // Forward declaration
+typedef struct Enemy Enemy;    // Forward declaration
+
+void render_draw_player(SDL_Renderer* renderer, Player* player);
+void render_draw_enemies(SDL_Renderer* renderer, Enemy enemies[], int count);
+```
+
+**When to use:**
+- Breaking circular dependencies
+- Header only needs pointer to type
+- Don't need to know struct internals
+
+**When NOT to use:**
+```c
+// âŒ Can't do this with forward declaration
+typedef struct Player Player;
+void use_player(Player p);  // ERROR: Need full definition
+
+// âœ… This works
+typedef struct Player Player;
+void use_player(Player* p);  // OK: Just a pointer
+```
+
+**Full example:**
+```c
+// enemy.h
+#ifndef ENEMY_H
+#define ENEMY_H
+
+// Forward declare Player (defined in player.h)
+typedef struct Player Player;
+
+typedef struct {
+    int col, row;
+    // ...
+} Enemy;
+
+// Uses Player* (pointer), so forward declaration is enough
+void enemy_update(Enemy* enemy, Player* player, ...);
+
+#endif
+```
+
+**Why this works:**
+- Compiler knows pointers are all the same size
+- Don't need struct contents to pass pointer
+- Only enemy.c needs full Player definition
+
+**In enemy.c:**
+```c
+#include "enemy.h"
+#include "player.h"  // NOW we get full definition
+
+void enemy_update(Enemy* enemy, Player* player, ...) {
+    // Can access player->col, player->row, etc.
+}
+```
+
+
+### 11. AI Pathfinding Basics
+
+**Simple chase algorithm:**
+```c
+Direction get_direction_to(int from_col, int from_row, 
+                           int to_col, int to_row) {
+    int dx = to_col - from_col;
+    int dy = to_row - from_row;
+    
+    // Move in direction of larger difference
+    if (abs(dx) > abs(dy)) {
+        return (dx > 0) ? DIR_RIGHT : DIR_LEFT;
+    } else {
+        return (dy > 0) ? DIR_DOWN : DIR_UP;
+    }
+}
+```
+
+**How it works:**
+```
+Player at (10, 5)
+Enemy at (6, 8)
+
+dx = 10 - 6 = 4   (player is 4 tiles right)
+dy = 5 - 8 = -3   (player is 3 tiles up)
+
+abs(4) > abs(3)   (horizontal difference larger)
+â†' Move RIGHT to close the gap
+```
+
+**Why this is good enough:**
+- Simple to implement
+- No complex data structures
+- Fast (just arithmetic)
+- Feels intelligent to players
+- Enemies don't get stuck easily
+
+**Making AI less perfect:**
+```c
+// 30% chance to move randomly instead
+if (rand() % 100 < 30) {
+    Direction random_dir = rand() % 4;
+    return random_dir;
+}
+
+// Otherwise chase player
+return get_direction_to(enemy_col, enemy_row, player_col, player_row);
+```
+
+**Why randomness helps:**
+- More organic movement
+- Less frustrating for player
+- Enemies don't always take optimal path
+- Creates variety in behavior
+
+**Alternative AI strategies:**
+
+**Line of sight:**
+```c
+bool can_see_player(Enemy* enemy, Player* player) {
+    // Only chase if can see player
+    if (enemy->row != player->row && enemy->col != player->col) {
+        return false;  // Not in same row or column
+    }
+    // Check for walls between
+    return true;
+}
+```
+
+**State-based AI:**
+```c
+typedef enum {
+    AI_STATE_PATROL,
+    AI_STATE_CHASE,
+    AI_STATE_FLEE,
+    AI_STATE_ATTACK
+} AIState;
+
+void enemy_update(Enemy* enemy, Player* player) {
+    switch(enemy->ai_state) {
+        case AI_STATE_PATROL:
+            patrol_random();
+            if (can_see_player()) {
+                enemy->ai_state = AI_STATE_CHASE;
+            }
+            break;
+        case AI_STATE_CHASE:
+            chase_player();
+            if (close_enough()) {
+                enemy->ai_state = AI_STATE_ATTACK;
+            }
+            break;
+        // ...
+    }
+}
+```
+
+**Different personalities:**
+```c
+// Aggressive enemies: chase faster
+if (enemy->type == ENEMY_FYGAR) {
+    enemy->move_cooldown = 4;  // Fast
+}
+
+// Cautious enemies: keep distance
+if (distance_to_player < 3) {
+    move_away_from_player();  // Flee!
+} else {
+    chase_player();
+}
+
+// Random enemies: unpredictable
+if (rand() % 100 < 50) {
+    move_random();
+} else {
+    chase_player();
+}
+```
+
+### 12. Multiple Entity Updates
+
+**Update pattern:**
+```c
+// In main game loop
+for (int i = 0; i < enemy_count; i++) {
+    enemy_update(&enemies[i], &player, grid);
+}
+```
+
+**Why loop through array:**
+- All enemies get updated each frame
+- Order doesn't matter (usually)
+- Simple and clear
+- Easy to add/remove entities
+
+**Entity interactions:**
+```c
+// Check each enemy against player
+for (int i = 0; i < enemy_count; i++) {
+    if (enemy_collides_with_player(&enemies[i], &player)) {
+        handle_collision(&enemies[i], &player);
+    }
+}
+
+// Check enemies against each other (later)
+for (int i = 0; i < enemy_count; i++) {
+    for (int j = i + 1; j < enemy_count; j++) {
+        if (enemies_collide(&enemies[i], &enemies[j])) {
+            // Handle enemy-enemy collision
+        }
+    }
+}
+```
+
+**Update order matters:**
+```c
+// âŒ Wrong order
+render();
+update_entities();
+// Renders OLD state before updating!
+
+// âœ… Correct order
+update_entities();
+render();
+// Renders NEW state after updating
+```
+
+**Render order matters too:**
+```c
+// Back to front rendering
+render_background();
+render_grid();
+render_enemies();    // Enemies first
+render_player();     // Player on top
+render_hud();        // HUD on top of everything
+```
+
+### 13. Context-Sensitive Speed
+
+**Different speeds for different situations:**
+```c
+void enemy_try_move(Enemy* enemy, Direction dir, TileType grid[]) {
+    // ... movement logic ...
+    
+    TileType tile = grid[new_row][new_col];
+    
+    if (tile == TILE_DIRT) {
+        enemy->move_cooldown = 12;  // Slow in dirt
+        enemy->is_ghosting = true;
+    } else if (tile == TILE_TUNNEL) {
+        enemy->move_cooldown = 6;   // Fast in tunnels
+        enemy->is_ghosting = false;
+    }
+}
+```
+
+**Why vary speed:**
+- Creates strategic depth
+- Rewards player for digging
+- Makes tunnels enemy territory
+- Visual feedback (ghosting effect)
+- Different feel for different situations
+
+**Speed as game balance:**
+```c
+// Player speeds
+if (digging) {
+    player->move_cooldown = 8;   // Slow when digging
+} else {
+    player->move_cooldown = 3;   // Fast in tunnels
+}
+
+// Enemy speeds (slightly faster than player)
+if (in_dirt) {
+    enemy->move_cooldown = 10;   // Slower than player digging
+} else {
+    enemy->move_cooldown = 5;    // Faster than player running
+}
+```
+
+**Tuning for feel:**
+- Lower cooldown = faster = harder
+- Higher cooldown = slower = easier
+- Test and adjust until it feels right
+- Different enemies can have different speeds
+
+
 ## Key Takeaways
 
-✅ Pointers store memory addresses  
-✅ Structs group related data  
-✅ Enums replace magic numbers  
-✅ Boolean flags track temporary state  
-✅ Header guards prevent double-inclusion  
-✅ Static limits scope  
-✅ Game loop: Input → Update → Render  
-✅ Frame-based timing creates game feel  
-✅ Context-sensitive actions add depth  
-✅ State tracking enables progression  
-✅ Rule-based mechanics create challenge  
-✅ Separate concerns into modules  
-✅ Compilation: source → object → executable  
-✅ Stack for local, heap for dynamic  
-✅ Always free what you malloc
+- Pointers store memory addresses  
+- Structs group related data  
+- Enums replace magic numbers  
+- Boolean flags track temporary state  
+- Header guards prevent double-inclusion  
+- Static limits scope  
+- Entity arrays manage multiple game objects  
+- Random numbers add variety and unpredictability  
+- Forward declarations break circular dependencies  
+- Game loop: Input → Update → Render  
+- Frame-based timing creates game feel  
+- Context-sensitive actions add depth  
+- State tracking enables progression  
+- Rule-based mechanics create challenge  
+- Simple AI can feel surprisingly intelligent  
+- Multiple entity updates need proper ordering  
+- Speed variations create strategic depth  
+- Separate concerns into modules  
+- Compilation: source → object → executable  
+- Stack for local, heap for dynamic  
+- Always free what you malloc

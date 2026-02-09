@@ -18,10 +18,10 @@
 
 **Solution 1: Missing source files in compilation**
 ```bash
-# ❌ Wrong - only compiling main.c
+# âŒ Wrong - only compiling main.c
 gcc main.c -lSDL3 -o digdug
 
-# ✅ Right - compile all source files
+# âœ… Right - compile all source files
 gcc main.c grid.c render.c player.c -lSDL3 -o digdug
 ```
 
@@ -91,10 +91,10 @@ multiple definition of `TILE_SIZE'
 
 **Solution 2: Use const in .c file**
 ```c
-// ❌ Wrong - in header
+// âŒ Wrong - in header
 #define GRID_WIDTH 20
 
-// ✅ Right - in one .c file
+// âœ… Right - in one .c file
 // types.c
 const int GRID_WIDTH = 20;
 
@@ -112,7 +112,7 @@ warning: conversion from 'int' to 'float' may change value
 **Code:**
 ```c
 SDL_FRect rect;
-rect.w = TILE_SIZE / 3;  // 32 / 3 = 10.666... → 10
+rect.w = TILE_SIZE / 3;  // 32 / 3 = 10.666... â†’ 10
 ```
 
 **Solution 1: Pre-calculate constants**
@@ -215,12 +215,12 @@ player.col = 5;
 
 **Cause 1: Forgot SDL_RenderPresent()**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 SDL_RenderClear(renderer);
 render_draw_grid(renderer, grid);
 // Nothing shows!
 
-// ✅ Right
+// âœ… Right
 SDL_RenderClear(renderer);
 render_draw_grid(renderer, grid);
 SDL_RenderPresent(renderer);  // THIS!
@@ -295,14 +295,14 @@ while (running) {
 
 **Cause: No frame rate control**
 ```c
-// ❌ Wrong - no delay
+// âŒ Wrong - no delay
 while (running) {
     handle_input();
     update();
     render();
 }
 
-// ✅ Right - 60 FPS
+// âœ… Right - 60 FPS
 while (running) {
     handle_input();
     update();
@@ -318,10 +318,10 @@ Player barely moves or takes forever to respond to input.
 
 **Cause 1: Slowdown value too high**
 ```c
-// ❌ Wrong - way too slow
+// âŒ Wrong - way too slow
 player->move_slowdown = 120;  // 2 seconds!
 
-// ✅ Right - feels good
+// âœ… Right - feels good
 player->move_slowdown = 8;   // Digging
 player->move_slowdown = 3;   // Running
 ```
@@ -337,12 +337,12 @@ printf("After update: %d\n", player.move_slowdown);
 
 **Cause 3: Slowdown initialized wrong**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 void player_init(Player* player, int col, int row) {
     player->move_slowdown = 10;  // Starts frozen!
 }
 
-// ✅ Right
+// âœ… Right
 void player_init(Player* player, int col, int row) {
     player->move_slowdown = 0;  // Can move immediately
 }
@@ -355,13 +355,13 @@ No speed difference between digging and running.
 
 **Cause: Not setting slowdown after digging**
 ```c
-// ❌ Wrong - no slowdown applied
+// âŒ Wrong - no slowdown applied
 if (destination == TILE_DIRT) {
     grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
     // Forgot to set slowdown!
 }
 
-// ✅ Right - different speeds
+// âœ… Right - different speeds
 bool just_dug = false;
 if (destination == TILE_DIRT) {
     grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
@@ -382,7 +382,7 @@ Player digs through ceiling, violating gravity rules.
 
 **Cause: Missing or wrong order of checks**
 ```c
-// ❌ Wrong - checks after converting to tunnel
+// âŒ Wrong - checks after converting to tunnel
 if (destination == TILE_DIRT) {
     grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
     destination = TILE_TUNNEL;
@@ -392,7 +392,7 @@ if (destination == TILE_DIRT && dir == DIR_UP) {
     return false;
 }
 
-// ✅ Right - check BEFORE converting
+// âœ… Right - check BEFORE converting
 TileType destination = grid_get_tile(grid, new_row, new_col);
 
 // Block upward digging FIRST
@@ -414,13 +414,13 @@ HUD bars don't appear even though player is digging.
 
 **Cause 1: Not incrementing counter**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 if (destination == TILE_DIRT) {
     grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
     // Forgot to increment!
 }
 
-// ✅ Right
+// âœ… Right
 if (destination == TILE_DIRT) {
     grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
     player->dirt_dug++;  // THIS!
@@ -429,14 +429,14 @@ if (destination == TILE_DIRT) {
 
 **Cause 2: Counter not initialized**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 void player_init(Player* player, int col, int row) {
     player->col = col;
     player->row = row;
     // Forgot dirt_dug!
 }
 
-// ✅ Right
+// âœ… Right
 void player_init(Player* player, int col, int row) {
     player->col = col;
     player->row = row;
@@ -461,14 +461,14 @@ Dirt counter works but bars don't show on screen.
 
 **Cause 1: HUD not being drawn**
 ```c
-// ❌ Wrong - forgot to call render_draw_hud
+// âŒ Wrong - forgot to call render_draw_hud
 SDL_RenderClear(renderer);
 render_draw_grid(renderer, grid);
 render_draw_player(renderer, &player);
 // No HUD!
 SDL_RenderPresent(renderer);
 
-// ✅ Right
+// âœ… Right
 SDL_RenderClear(renderer);
 render_draw_grid(renderer, grid);
 render_draw_player(renderer, &player);
@@ -478,13 +478,13 @@ SDL_RenderPresent(renderer);
 
 **Cause 2: HUD drawn before clear**
 ```c
-// ❌ Wrong - order matters!
+// âŒ Wrong - order matters!
 render_draw_hud(renderer, &player);  // Drawn first
 SDL_RenderClear(renderer);           // Clears it!
 render_draw_grid(renderer, grid);
 render_draw_player(renderer, &player);
 
-// ✅ Right - HUD last
+// âœ… Right - HUD last
 SDL_RenderClear(renderer);
 render_draw_grid(renderer, grid);
 render_draw_player(renderer, &player);
@@ -558,13 +558,13 @@ CONFLICT (content): Merge conflict in README.md
 ```bash
 # Open the file, look for conflict markers
 <<<<<<< HEAD
-⬜ **Step 4**: Player character
+â¬œ **Step 4**: Player character
 =======
-✅ **Step 4**: Player character
+âœ… **Step 4**: Player character
 >>>>>>> commit_hash
 
 # Keep what you want, remove markers
-✅ **Step 4**: Player character
+âœ… **Step 4**: Player character
 
 # Mark as resolved
 git add README.md
@@ -621,7 +621,7 @@ git commit -m "Remove build artifacts and update .gitignore"
 
 **Cause: Not handling SDL_EVENT_QUIT**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 while (SDL_PollEvent(&event)) {
     if (event.type == SDL_EVENT_KEY_DOWN) {
         // Handle keys
@@ -629,7 +629,7 @@ while (SDL_PollEvent(&event)) {
     // Forgot to check QUIT!
 }
 
-// ✅ Right
+// âœ… Right
 while (SDL_PollEvent(&event)) {
     if (event.type == SDL_EVENT_QUIT) {
         running = false;
@@ -644,28 +644,28 @@ while (SDL_PollEvent(&event)) {
 
 **Cause 1: Wrong event type**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 if (event.type == SDL_EVENT_KEY_UP) {  // Release, not press!
 
-// ✅ Right
+// âœ… Right
 if (event.type == SDL_EVENT_KEY_DOWN) {
 ```
 
 **Cause 2: Wrong key constant**
 ```c
-// ❌ Wrong (SDL2 style)
+// âŒ Wrong (SDL2 style)
 if (event.key.keysym.sym == SDLK_UP) {
 
-// ✅ Right (SDL3 style)
+// âœ… Right (SDL3 style)
 if (event.key.key == SDLK_UP) {
 ```
 
 **Cause 3: Not polling events**
 ```c
-// ❌ Wrong - single poll
+// âŒ Wrong - single poll
 SDL_PollEvent(&event);
 
-// ✅ Right - loop until no more events
+// âœ… Right - loop until no more events
 while (SDL_PollEvent(&event)) {
     // Handle event
 }
@@ -694,11 +694,11 @@ Program crashes after running for a while
 
 **1. Not destroying SDL objects**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 SDL_Quit();
 // Forgot to destroy window and renderer!
 
-// ✅ Right
+// âœ… Right
 SDL_DestroyRenderer(renderer);
 SDL_DestroyWindow(window);
 SDL_Quit();
@@ -706,14 +706,14 @@ SDL_Quit();
 
 **2. Creating objects in loop**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 while (running) {
     SDL_Texture* tex = SDL_CreateTexture(...);
     // Use tex
     // Forgot to destroy!
 }
 
-// ✅ Right
+// âœ… Right
 SDL_Texture* tex = SDL_CreateTexture(...);
 while (running) {
     // Use tex
@@ -766,10 +766,10 @@ void render_draw_player(...) {
 
 **Common issue: Off-by-one errors**
 ```c
-// ❌ Wrong
+// âŒ Wrong
 if (new_col < 0 || new_col > GRID_WIDTH) {  // Should be >=
 
-// ✅ Right
+// âœ… Right
 if (new_col < 0 || new_col >= GRID_WIDTH) {
 ```
 
@@ -777,8 +777,8 @@ if (new_col < 0 || new_col >= GRID_WIDTH) {
 
 **Issue: Integer division**
 ```c
-// Want: 15 dirt → 1 full bar + half bar
-// Got:  15 dirt → 1 bar (integer division!)
+// Want: 15 dirt â†’ 1 full bar + half bar
+// Got:  15 dirt â†’ 1 bar (integer division!)
 
 int bars = player->dirt_dug / 10;  // 15 / 10 = 1
 
@@ -920,6 +920,397 @@ When something doesn't work:
    - Fresh eyes find bugs faster
    - Rubber duck debugging works!
 
+## Step 6 Specific Issues
+
+### Summary Checklist
+
+If something's wrong in Step 6, check:
+
+1. **Missing includes in main.c?**
+   - `#include <stdlib.h>` for srand() and rand()
+   - `#include <time.h>` for time()
+   - `#include "enemy.h"` for enemy system
+
+2. **Enemy files created?**
+   - enemy.h exists
+   - enemy.c exists
+   - Added to Makefile SOURCES and OBJECTS
+
+3. **Enemies spawned in main.c?**
+   ```c
+   Enemy enemies[MAX_ENEMIES];
+   int enemy_count = 0;
+   enemy_init(&enemies[enemy_count++], ENEMY_POOKA, 15, 5);
+   ```
+
+4. **Enemies updated each frame?**
+   ```c
+   for (int i = 0; i < enemy_count; i++) {
+       enemy_update(&enemies[i], &player, grid);
+   }
+   ```
+
+5. **Enemies rendered?**
+   ```c
+   render_draw_enemies(renderer, enemies, enemy_count);
+   ```
+
+6. **Render order correct?**
+   - Grid first
+   - Enemies second
+   - Player third (on top)
+
+### Enemies Don't Appear
+
+**Symptom:**
+Black screen or no red/green squares visible.
+
+**Cause 1: Not spawning enemies**
+```c
+// âŒ Wrong - forgot to spawn
+Enemy enemies[MAX_ENEMIES];
+int enemy_count = 0;
+// No enemy_init() calls!
+
+// âœ… Right
+Enemy enemies[MAX_ENEMIES];
+int enemy_count = 0;
+enemy_init(&enemies[enemy_count++], ENEMY_POOKA, 15, 5);
+enemy_init(&enemies[enemy_count++], ENEMY_FYGAR, 10, 8);
+```
+
+**Cause 2: Not rendering enemies**
+```c
+// âŒ Wrong - forgot to call render function
+SDL_RenderClear(renderer);
+render_draw_grid(renderer, grid);
+render_draw_player(renderer, &player);
+// No render_draw_enemies()!
+
+// âœ… Right
+SDL_RenderClear(renderer);
+render_draw_grid(renderer, grid);
+render_draw_enemies(renderer, enemies, enemy_count);  // THIS!
+render_draw_player(renderer, &player);
+```
+
+**Cause 3: Enemies spawned off-screen**
+```c
+// Check spawn positions are valid
+printf("Spawning enemy at (%d, %d)\n", col, row);
+// Make sure 0 <= col < GRID_WIDTH and 0 <= row < GRID_HEIGHT
+```
+
+**Debug it:**
+```c
+printf("enemy_count = %d\n", enemy_count);
+for (int i = 0; i < enemy_count; i++) {
+    printf("Enemy %d: type=%d, pos=(%d,%d), alive=%d\n",
+           i, enemies[i].type, enemies[i].col, enemies[i].row, 
+           enemies[i].is_alive);
+}
+```
+
+### Enemies Don't Move
+
+**Symptom:**
+Enemies spawn but stay in one place.
+
+**Cause 1: Not updating enemies**
+```c
+// âŒ Wrong - forgot to update
+player_update(&player);
+// No enemy updates!
+
+// âœ… Right
+player_update(&player);
+for (int i = 0; i < enemy_count; i++) {
+    enemy_update(&enemies[i], &player, grid);
+}
+```
+
+**Cause 2: Cooldown stuck**
+```c
+// Debug cooldown
+void enemy_update(Enemy* enemy, Player* player, ...) {
+    printf("Enemy cooldown: %d\n", enemy->move_cooldown);
+    if (enemy->move_cooldown > 0) {
+        enemy->move_cooldown--;
+        return;
+    }
+    // ... movement logic ...
+}
+```
+
+**Cause 3: AI not working**
+```c
+// Debug AI decisions
+Direction preferred = get_direction_to(...);
+printf("Enemy at (%d,%d), Player at (%d,%d), preferred dir=%d\n",
+       enemy->col, enemy->row, player->col, player->row, preferred);
+```
+
+**Cause 4: All moves blocked**
+```c
+// Debug movement attempts
+bool moved = enemy_try_move(enemy, preferred, grid);
+printf("Tried to move %d, success=%d\n", preferred, moved);
+```
+
+### Enemies Move Too Fast
+
+**Symptom:**
+Enemies zoom around and catch player instantly.
+
+**Solution: Increase cooldown values in enemy.c**
+```c
+// In enemy_try_move():
+if (tile == TILE_DIRT) {
+    enemy->move_cooldown = 20;  // Increase from 12
+} else {
+    enemy->move_cooldown = 10;  // Increase from 6
+}
+```
+
+**Test different values:**
+```c
+// Very slow (easier)
+enemy->move_cooldown = 30;
+
+// Slow (easy)
+enemy->move_cooldown = 20;
+
+// Medium (balanced)
+enemy->move_cooldown = 10;
+
+// Fast (hard)
+enemy->move_cooldown = 5;
+
+// Very fast (very hard)
+enemy->move_cooldown = 3;
+```
+
+### Enemies Too Good at Chasing
+
+**Symptom:**
+Enemies perfectly track player, game too hard.
+
+**Solution: Add randomness in enemy.c**
+```c
+void enemy_update(Enemy* enemy, Player* player, ...) {
+    // ... cooldown check ...
+    
+    // Add random movement
+    if (rand() % 100 < 30) {  // 30% chance
+        Direction random_dir = rand() % 4;
+        if (enemy_try_move(enemy, random_dir, grid)) {
+            return;
+        }
+    }
+    
+    // Normal chase logic
+    Direction preferred = get_direction_to(...);
+    // ...
+}
+```
+
+**Tune randomness:**
+```c
+// More random = dumber enemies
+if (rand() % 100 < 50) { ... }  // 50% random
+
+// Less random = smarter enemies
+if (rand() % 100 < 10) { ... }  // 10% random
+```
+
+### Implicit Declaration of srand/rand
+
+**Symptom:**
+```
+main.c:42:3: error: implicit declaration of function 'srand'
+```
+
+**Solution:**
+Add to top of main.c:
+```c
+#include <stdlib.h>  // For srand() and rand()
+#include <time.h>    // For time()
+```
+
+### Enemies Walk Through Walls
+
+**Debug the pathfinding:**
+```c
+static bool enemy_try_move(Enemy* enemy, Direction dir, ...) {
+    // ... calculate new_col, new_row ...
+    
+    TileType tile = grid_get_tile(grid, new_row, new_col);
+    printf("Enemy trying to move to (%d,%d), tile=%d\n", 
+           new_col, new_row, tile);
+    
+    if (tile == TILE_ROCK) {
+        printf("  Blocked by rock!\n");
+        return false;
+    }
+    // ...
+}
+```
+
+**Check enemy_can_walk() logic:**
+```c
+static bool enemy_can_walk(TileType tile) {
+    printf("Can walk on tile %d? %d\n", tile, 
+           tile == TILE_EMPTY || tile == TILE_TUNNEL || tile == TILE_DIRT);
+    return (tile == TILE_EMPTY || tile == TILE_TUNNEL || tile == TILE_DIRT);
+}
+```
+
+### Collision Not Working
+
+**Symptom:**
+Player and enemy overlap, no "Game over!" message.
+
+**Cause 1: Not checking collision**
+```c
+// âŒ Wrong - forgot to check
+for (int i = 0; i < enemy_count; i++) {
+    enemy_update(&enemies[i], &player, grid);
+    // No collision check!
+}
+
+// âœ… Right
+for (int i = 0; i < enemy_count; i++) {
+    enemy_update(&enemies[i], &player, grid);
+    if (enemy_collides_with_player(&enemies[i], &player)) {
+        printf("Hit by enemy! Game over!\n");
+        player.is_alive = false;
+    }
+}
+```
+
+**Cause 2: Wrong collision logic**
+```c
+// Debug collision
+bool enemy_collides_with_player(Enemy* enemy, Player* player) {
+    bool collides = (enemy->is_alive && 
+                     player->is_alive &&
+                     enemy->col == player->col &&
+                     enemy->row == player->row);
+    printf("Collision check: E(%d,%d) P(%d,%d) = %d\n",
+           enemy->col, enemy->row, player->col, player->row, collides);
+    return collides;
+}
+```
+
+### Forward Declaration Errors
+
+**Symptom:**
+```
+render.h:10:45: error: unknown type name 'Enemy'
+```
+
+**Solution:**
+Add forward declaration in render.h:
+```c
+// At top of render.h
+typedef struct Player Player;
+typedef struct Enemy Enemy;
+
+// Then use pointers
+void render_draw_player(SDL_Renderer* renderer, Player* player);
+void render_draw_enemies(SDL_Renderer* renderer, Enemy enemies[], int count);
+```
+
+### Enemies Render Behind Grid
+
+**Symptom:**
+Can barely see enemies, they appear behind dirt.
+
+**Cause: Wrong render order**
+```c
+// âŒ Wrong order
+render_draw_enemies(renderer, enemies, enemy_count);  // First
+render_draw_grid(renderer, grid);  // Grid covers enemies!
+
+// âœ… Right order
+render_draw_grid(renderer, grid);  // Background
+render_draw_enemies(renderer, enemies, enemy_count);  // On top
+render_draw_player(renderer, &player);  // Player on top of enemies
+```
+
+### Compiler Warnings About Enum Comparison
+
+**Symptom:**
+```
+enemy.c:120:11: warning: comparison of integer expressions 
+of different signedness: 'int' and 'Direction'
+```
+
+**Solution:**
+Change loop variable type:
+```c
+// âŒ Wrong
+for (int d = 0; d < 4; d++) {
+    if (d != preferred) { ... }
+}
+
+// âœ… Right
+for (Direction d = DIR_UP; d <= DIR_RIGHT; d++) {
+    if (d != preferred) { ... }
+}
+```
+
+### Enemies Get Stuck in Corners
+
+**This is actually OK** - the simple AI can get stuck sometimes. To fix:
+
+**Add more alternatives:**
+```c
+// Try all 4 directions instead of just alternatives
+Direction all_dirs[4] = {DIR_UP, DIR_DOWN, DIR_LEFT, DIR_RIGHT};
+for (int i = 0; i < 4; i++) {
+    if (enemy_try_move(enemy, all_dirs[i], grid)) {
+        return;  // Found a valid move
+    }
+}
+// Still stuck? That's OK, try again next frame
+```
+
+**Or add backtracking:**
+```c
+// Remember last direction
+enemy->last_dir = dir;
+
+// If stuck, try opposite direction
+Direction opposite = get_opposite(enemy->last_dir);
+enemy_try_move(enemy, opposite, grid);
+```
+
+### Random Behavior Not Random
+
+**Symptom:**
+Enemies always move the same way each run.
+
+**Cause: Forgot to seed random**
+```c
+// âŒ Wrong - no seed
+int main(void) {
+    // ... SDL init ...
+    // Forgot srand()!
+    
+// âœ… Right
+int main(void) {
+    srand(time(NULL));  // Seed at startup
+    // ... rest of init ...
+}
+```
+
+**Check it's seeded:**
+```c
+printf("First random: %d\n", rand());  // Should be different each run
+```
+
+
 ## Getting Help
 
 **Before asking for help, provide:**
@@ -963,16 +1354,16 @@ Environment: Ubuntu 24, SDL3 3.4.0, GCC 13
 
 ## Key Takeaways
 
-✅ Read error messages carefully  
-✅ Use printf debugging liberally  
-✅ Check assumptions with prints  
-✅ Enable compiler warnings  
-✅ Test small parts in isolation  
-✅ Use version control (git)  
-✅ Initialize all struct fields  
-✅ Check function call order  
-✅ Verify cooldown systems work  
-✅ Debug HUD rendering separately  
-✅ Take breaks when stuck  
-✅ Search before asking  
-✅ Provide context when asking for help
+- Read error messages carefully  
+- Use printf debugging liberally  
+- Check assumptions with prints  
+- Enable compiler warnings  
+- Test small parts in isolation  
+- Use version control (git)  
+- Initialize all struct fields  
+- Check function call order  
+- Verify cooldown systems work  
+- Debug HUD rendering separately  
+- Take breaks when stuck  
+- Search before asking  
+- Provide context when asking for help

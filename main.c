@@ -1,13 +1,15 @@
-#include <SDL3/SDL.h>
-#include <stdbool.h>
-#include <stdio.h>
-
+#include "enemy.h"
 #include "grid.h"
 #include "player.h"
 #include "render.h"
 #include "types.h"
+#include <SDL3/SDL.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
-int main(int argc, char *argv[]) {
+int main(void) {
   // initialize SDL3
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -37,11 +39,23 @@ int main(int argc, char *argv[]) {
   printf("SDL3 Initialized successfully!\n");
   printf("Press ESC or close window to quit\n");
 
+  // seed random num gen
+  srand(time(NULL));
+
   TileType grid[GRID_HEIGHT][GRID_WIDTH];
   grid_init(grid);
 
   Player player;
   player_init(&player, 10, 2);
+
+  // create enemies
+  Enemy enemies[MAX_ENEMIES];
+  int enemy_count = 0;
+
+  // spawn 2 Pookas  & 1 Fygar
+  enemy_init(&enemies[enemy_count++], ENEMY_POOKA, 20, 5);
+  // enemy_init(&enemies[enemy_count++], ENEMY_POOKA, 5, 10);
+  // enemy_init(&enemies[enemy_count++], ENEMY_FYGAR, 10, 8);
 
   // Game loop control
   bool running = true;
@@ -72,6 +86,17 @@ int main(int argc, char *argv[]) {
 
     // ========= UPDATE (game Logic) ===========
     player_update(&player);
+
+    // Update all enenmies
+    for (int i = 0; i < enemy_count; i++) {
+      enemy_update(&enemies[i], &player, grid);
+
+      // check collision with player
+      if (enemy_collides_with_player(&enemies[i], &player)) {
+        printf("Hit by enemy!! Game over!\n");
+        player.is_alive = false;
+      }
+    }
     // ========= RENDER ========================
 
     // clear screen with a color (R,G,B,A)
@@ -80,6 +105,9 @@ int main(int argc, char *argv[]) {
 
     // Display the entire grid
     render_draw_grid(renderer, grid);
+
+    // Display enemies
+    render_draw_enemies(renderer, enemies, enemy_count);
 
     // Draw player on top
     render_draw_player(renderer, &player);

@@ -1,3 +1,4 @@
+#include "enemy.h"
 #include "player.h"
 #include "render.h"
 #include "types.h"
@@ -123,5 +124,75 @@ void render_draw_hud(SDL_Renderer *renderer, Player *player) {
     bar.x = 5 + (i * 22);
     SDL_SetRenderDrawColor(renderer, 139, 69, 139, 255); // dirt brown
     SDL_RenderFillRect(renderer, &bar);
+  }
+}
+
+void render_draw_enemies(SDL_Renderer *renderer, Enemy enemies[],
+                         int enemy_count) {
+  for (int i = 0; i < enemy_count; i++) {
+    Enemy *enemy = &enemies[i];
+
+    if (!enemy->is_alive)
+      continue; // skip dead enemies
+
+    SDL_FRect enemy_rect;
+    int x, y;
+    enemy_get_pixel_pos(enemy, &x, &y);
+
+    enemy_rect.x = x;
+    enemy_rect.y = y;
+    enemy_rect.w = TILE_SIZE;
+    enemy_rect.h = TILE_SIZE;
+
+    // diff colors for diff types
+    if (enemy->type == ENEMY_POOKA) {
+      // Enemy Pookas: red
+      if (enemy->is_ghosting) {
+        SDL_SetRenderDrawColor(renderer, 100, 0, 0,
+                               180); // semi-transparent red
+      } else {
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // bright red
+      }
+    } else {
+      // Enemy Fygar: green
+
+      if (enemy->is_ghosting) {
+        SDL_SetRenderDrawColor(renderer, 0, 100, 0,
+                               180); // semi-transparent green
+      } else {
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // bright green
+      }
+    }
+    SDL_RenderFillRect(renderer, &enemy_rect);
+
+    // Draw facing indicator (small circle)
+    SDL_FRect indicator;
+    indicator.w = (float)TILE_SIZE / 4;
+    indicator.h = (float)TILE_SIZE / 4;
+
+    // pos based on dir
+    switch (enemy->facing) {
+    case DIR_UP:
+      indicator.x = x + TILE_SIZE / 2 - TILE_SIZE / 8;
+      indicator.y = y + 4;
+      break;
+    case DIR_DOWN:
+      indicator.x = x + TILE_SIZE / 2 - TILE_SIZE / 8;
+      indicator.y = y + TILE_SIZE - 4 - TILE_SIZE / 4;
+      break;
+
+    case DIR_LEFT:
+      indicator.x = x + 4;
+      indicator.y = y + TILE_SIZE / 2 - TILE_SIZE / 8;
+      break;
+    case DIR_RIGHT:
+      indicator.x = x + TILE_SIZE - 4 - TILE_SIZE / 4;
+      indicator.y = y + TILE_SIZE / 2 - TILE_SIZE / 8;
+      break;
+    }
+
+    // yellow indicator
+    SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+    SDL_RenderFillRect(renderer, &indicator);
   }
 }

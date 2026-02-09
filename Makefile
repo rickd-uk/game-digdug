@@ -7,11 +7,11 @@ LDFLAGS = -lSDL3
 TARGET = digdug
 
 # Source files - add new .c files here!
-SOURCES = main.c grid.c render.c player.c
-OBJECTS = main.o grid.o render.o player.o
+SOURCES = main.c grid.c render.c player.c enemy.c
+OBJECTS = main.o grid.o render.o player.o enemy.o
 
 # Header dependencies (if you change a .h file, rebuild)
-HEADERS = types.h grid.h render.h player.h
+HEADERS = types.h grid.h render.h player.h enemy.h
 
 # Default target
 all: $(TARGET)
@@ -34,6 +34,9 @@ render.o: render.c $(HEADERS)
 player.o: player.c $(HEADERS)
 	$(CC) $(CFLAGS) -c player.c -o player.o
 
+enemy.o: enemy.c $(HEADERS)
+	$(CC) $(CFLAGS) -c enemy.c -o enemy.o
+	
 # Clean build files
 clean:
 	rm -f $(OBJECTS) $(TARGET)
