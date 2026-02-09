@@ -7,6 +7,8 @@ void player_init(Player *player, int start_col, int start_row) {
   player->row = start_row;
   player->facing = DIR_RIGHT;
   player->is_alive = true;
+  player->dirt_dug = 0;
+  player->move_slowdown = 0;
 }
 
 static bool can_move_to(TileType tile) {
@@ -17,6 +19,10 @@ static bool can_move_to(TileType tile) {
 
 bool player_move(Player *player, Direction dir,
                  TileType grid[GRID_HEIGHT][GRID_WIDTH]) {
+  // check slowdown - cannot move yet
+  if (player->move_slowdown > 0)
+    return false;
+
   int new_col = player->col;
   int new_row = player->row;
 
@@ -43,13 +49,33 @@ bool player_move(Player *player, Direction dir,
 
   // check if destantion file is walkable
   TileType destination = grid_get_tile(grid, new_row, new_col);
+  // cannot dig upwards
+  if (destination == TILE_DIRT && dir == DIR_UP)
+    return false;
+
+  bool just_dug = false;
+  // remove dirt if there is some
+  if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    destination = TILE_TUNNEL; // update local view
+    just_dug = true;
+    player->dirt_dug++;
+  }
+
   if (!can_move_to(destination))
-    return false; // blocked by dirt / rocks
+    return false; // blocked by rock
 
   // move is valid - update pos
   player->col = new_col;
   player->row = new_row;
   player->facing = dir;
+
+  // set movement slowdown based on what happened
+  if (just_dug) {
+    player->move_slowdown = 8; // slower when digging (8 frames)
+  } else {
+    player->move_slowdown = 3; // faster in tunnels
+  }
 
   return true;
 }
@@ -57,4 +83,10 @@ bool player_move(Player *player, Direction dir,
 void player_get_pixel_pos(Player *player, int *x, int *y) {
   *x = player->col * TILE_SIZE;
   *y = player->row * TILE_SIZE;
+}
+
+void player_update(Player *player) {
+  if (player->move_slowdown > 0) {
+    player->move_slowdown--;
+  }
 }

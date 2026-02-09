@@ -8,6 +8,7 @@
 ```
 /usr/bin/ld: main.o: undefined reference to `grid_init'
 /usr/bin/ld: main.o: undefined reference to `render_draw_grid'
+/usr/bin/ld: main.o: undefined reference to `player_update'
 ```
 
 **Cause:**
@@ -269,6 +270,27 @@ for (int row = 0; row < GRID_HEIGHT; row++) {
 player_init(&player, 10, 2);  // Is grid[2][10] walkable?
 ```
 
+**Cause 4: Cooldown stuck (Step 5)**
+```c
+// Debug the slowdown system
+printf("move_slowdown: %d\n", player.move_slowdown);
+
+// Make sure player_update() is being called
+void player_update(Player* player) {
+    printf("Updating, slowdown: %d\n", player->move_slowdown);
+    if (player->move_slowdown > 0) {
+        player->move_slowdown--;
+    }
+}
+
+// Check it's in main loop
+while (running) {
+    handle_input(&event, &running, &player, grid);
+    player_update(&player);  // THIS MUST BE CALLED!
+    // render...
+}
+```
+
 ### Player Moves Too Fast
 
 **Cause: No frame rate control**
@@ -286,6 +308,240 @@ while (running) {
     update();
     render();
     SDL_Delay(16);  // ~60 FPS
+}
+```
+
+### Player Moves Too Slowly (Step 5)
+
+**Symptom:**
+Player barely moves or takes forever to respond to input.
+
+**Cause 1: Slowdown value too high**
+```c
+// ❌ Wrong - way too slow
+player->move_slowdown = 120;  // 2 seconds!
+
+// ✅ Right - feels good
+player->move_slowdown = 8;   // Digging
+player->move_slowdown = 3;   // Running
+```
+
+**Cause 2: Slowdown not decrementing**
+```c
+// Make sure player_update() is called every frame
+printf("Before update: %d\n", player.move_slowdown);
+player_update(&player);
+printf("After update: %d\n", player.move_slowdown);
+// Should decrease by 1 each time
+```
+
+**Cause 3: Slowdown initialized wrong**
+```c
+// ❌ Wrong
+void player_init(Player* player, int col, int row) {
+    player->move_slowdown = 10;  // Starts frozen!
+}
+
+// ✅ Right
+void player_init(Player* player, int col, int row) {
+    player->move_slowdown = 0;  // Can move immediately
+}
+```
+
+### Player Moves Instantly Through Dirt (Step 5)
+
+**Symptom:**
+No speed difference between digging and running.
+
+**Cause: Not setting slowdown after digging**
+```c
+// ❌ Wrong - no slowdown applied
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    // Forgot to set slowdown!
+}
+
+// ✅ Right - different speeds
+bool just_dug = false;
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    just_dug = true;
+}
+
+if (just_dug) {
+    player->move_slowdown = 8;  // Slow for digging
+} else {
+    player->move_slowdown = 3;  // Fast for tunnels
+}
+```
+
+### Player Can Dig Upward (Step 5)
+
+**Symptom:**
+Player digs through ceiling, violating gravity rules.
+
+**Cause: Missing or wrong order of checks**
+```c
+// ❌ Wrong - checks after converting to tunnel
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    destination = TILE_TUNNEL;
+}
+// Too late to check direction now!
+if (destination == TILE_DIRT && dir == DIR_UP) {
+    return false;
+}
+
+// ✅ Right - check BEFORE converting
+TileType destination = grid_get_tile(grid, new_row, new_col);
+
+// Block upward digging FIRST
+if (destination == TILE_DIRT && dir == DIR_UP) {
+    return false;
+}
+
+// Then do digging
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    destination = TILE_TUNNEL;
+}
+```
+
+### Dirt Counter Not Increasing (Step 5)
+
+**Symptom:**
+HUD bars don't appear even though player is digging.
+
+**Cause 1: Not incrementing counter**
+```c
+// ❌ Wrong
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    // Forgot to increment!
+}
+
+// ✅ Right
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    player->dirt_dug++;  // THIS!
+}
+```
+
+**Cause 2: Counter not initialized**
+```c
+// ❌ Wrong
+void player_init(Player* player, int col, int row) {
+    player->col = col;
+    player->row = row;
+    // Forgot dirt_dug!
+}
+
+// ✅ Right
+void player_init(Player* player, int col, int row) {
+    player->col = col;
+    player->row = row;
+    player->dirt_dug = 0;  // Initialize
+}
+```
+
+**Debug it:**
+```c
+// Add print when digging
+if (destination == TILE_DIRT) {
+    grid_set_tile(grid, new_row, new_col, TILE_TUNNEL);
+    player->dirt_dug++;
+    printf("Dug dirt! Total: %d\n", player->dirt_dug);
+}
+```
+
+### HUD Bars Not Visible (Step 5)
+
+**Symptom:**
+Dirt counter works but bars don't show on screen.
+
+**Cause 1: HUD not being drawn**
+```c
+// ❌ Wrong - forgot to call render_draw_hud
+SDL_RenderClear(renderer);
+render_draw_grid(renderer, grid);
+render_draw_player(renderer, &player);
+// No HUD!
+SDL_RenderPresent(renderer);
+
+// ✅ Right
+SDL_RenderClear(renderer);
+render_draw_grid(renderer, grid);
+render_draw_player(renderer, &player);
+render_draw_hud(renderer, &player);  // THIS!
+SDL_RenderPresent(renderer);
+```
+
+**Cause 2: HUD drawn before clear**
+```c
+// ❌ Wrong - order matters!
+render_draw_hud(renderer, &player);  // Drawn first
+SDL_RenderClear(renderer);           // Clears it!
+render_draw_grid(renderer, grid);
+render_draw_player(renderer, &player);
+
+// ✅ Right - HUD last
+SDL_RenderClear(renderer);
+render_draw_grid(renderer, grid);
+render_draw_player(renderer, &player);
+render_draw_hud(renderer, &player);
+```
+
+**Cause 3: Wrong color or position**
+```c
+// Debug HUD rendering
+void render_draw_hud(SDL_Renderer *renderer, Player *player) {
+    int bars = player->dirt_dug / 10;
+    printf("Drawing %d bars for %d dirt\n", bars, player->dirt_dug);
+    
+    // Make bars bright and obvious for testing
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);  // Bright red
+    
+    SDL_FRect bar;
+    bar.w = 20;
+    bar.h = 10;
+    bar.y = 5;
+    
+    for (int i = 0; i < bars && i < 30; i++) {
+        bar.x = 5 + (i * 22);
+        printf("Bar %d at x=%f\n", i, bar.x);
+        SDL_RenderFillRect(renderer, &bar);
+    }
+}
+```
+
+### Player "Stutters" When Moving (Step 5)
+
+**Symptom:**
+Movement feels jerky or inconsistent.
+
+**Cause: Slowdown values don't match feel**
+```c
+// Experiment with different values
+if (just_dug) {
+    player->move_slowdown = 6;   // Try 4, 6, 8, 10
+} else {
+    player->move_slowdown = 2;   // Try 1, 2, 3, 4
+}
+
+// Or remove slowdown during testing
+if (just_dug) {
+    player->move_slowdown = 0;  // No delay
+} else {
+    player->move_slowdown = 0;
+}
+```
+
+**Frame rate issues:**
+```c
+// Make sure frame delay is consistent
+while (running) {
+    // Game logic
+    SDL_Delay(16);  // EXACTLY 16ms for 60 FPS
 }
 ```
 
@@ -415,6 +671,17 @@ while (SDL_PollEvent(&event)) {
 }
 ```
 
+**Cause 4: Slowdown preventing movement (Step 5)**
+```c
+// Key is pressed but slowdown blocks it
+if (player->move_slowdown > 0) {
+    return false;  // Can't move yet
+}
+
+// Debug it
+printf("Key pressed, slowdown = %d\n", player->move_slowdown);
+```
+
 ### Memory Leak
 
 **Symptom:**
@@ -506,6 +773,23 @@ if (new_col < 0 || new_col > GRID_WIDTH) {  // Should be >=
 if (new_col < 0 || new_col >= GRID_WIDTH) {
 ```
 
+### Dirt Counter Arithmetic Wrong (Step 5)
+
+**Issue: Integer division**
+```c
+// Want: 15 dirt → 1 full bar + half bar
+// Got:  15 dirt → 1 bar (integer division!)
+
+int bars = player->dirt_dug / 10;  // 15 / 10 = 1
+
+// If you want partial bars, need floats
+float progress = (float)player->dirt_dug / 10.0f;
+int full_bars = (int)progress;
+float partial = progress - full_bars;
+
+// But for simplicity, integer division is fine
+```
+
 ## Performance Issues
 
 ### Game Runs Slowly
@@ -543,6 +827,48 @@ SDL_Delay(16);
 SDL_Delay(33);
 ```
 
+## Step 5 Specific Issues
+
+### Summary Checklist
+
+If something's wrong in Step 5, check:
+
+1. **Struct fields added?**
+   - `int dirt_dug;`
+   - `int move_slowdown;`
+
+2. **Fields initialized?**
+   - `player->dirt_dug = 0;`
+   - `player->move_slowdown = 0;`
+
+3. **player_update() exists and is called?**
+   ```c
+   void player_update(Player* p) {
+       if (p->move_slowdown > 0) p->move_slowdown--;
+   }
+   ```
+
+4. **Digging increments counter?**
+   ```c
+   player->dirt_dug++;
+   ```
+
+5. **Slowdown applied after actions?**
+   ```c
+   if (just_dug) player->move_slowdown = 8;
+   else player->move_slowdown = 3;
+   ```
+
+6. **Upward digging blocked?**
+   ```c
+   if (destination == TILE_DIRT && dir == DIR_UP) return false;
+   ```
+
+7. **HUD function called?**
+   ```c
+   render_draw_hud(renderer, &player);
+   ```
+
 ## Debugging Checklist
 
 When something doesn't work:
@@ -556,6 +882,8 @@ When something doesn't work:
 ```c
    printf("DEBUG: Reached here\n");
    printf("DEBUG: x=%d, y=%d\n", x, y);
+   printf("DEBUG: move_slowdown=%d\n", player->move_slowdown);
+   printf("DEBUG: dirt_dug=%d\n", player->dirt_dug);
 ```
 
 3. **Check your assumptions**
@@ -578,6 +906,9 @@ When something doesn't work:
 ```bash
    gcc -g main.c -o main
    gdb ./main
+   (gdb) break player_move
+   (gdb) run
+   (gdb) print player->move_slowdown
 ```
 
 7. **Check the docs**
@@ -607,6 +938,7 @@ When something doesn't work:
    - "I checked SDL3 is installed"
    - "I added the header guards"
    - "I verified the file exists"
+   - "I added printf, slowdown shows 0"
 
 4. **Your environment**
    - OS: Arch Linux
@@ -637,6 +969,10 @@ Environment: Ubuntu 24, SDL3 3.4.0, GCC 13
 ✅ Enable compiler warnings  
 ✅ Test small parts in isolation  
 ✅ Use version control (git)  
+✅ Initialize all struct fields  
+✅ Check function call order  
+✅ Verify cooldown systems work  
+✅ Debug HUD rendering separately  
 ✅ Take breaks when stuck  
 ✅ Search before asking  
 ✅ Provide context when asking for help

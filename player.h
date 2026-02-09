@@ -11,6 +11,8 @@ typedef struct {
   int row;
   Direction facing;
   bool is_alive;
+  int dirt_dug;
+  int move_slowdown;
 } Player;
 
 void player_init(Player *player, int start_col, int start_row);
@@ -19,5 +21,7 @@ bool player_move(Player *player, Direction dir,
                  TileType grid[GRID_HEIGHT][GRID_WIDTH]);
 
 void player_get_pixel_pos(Player *player, int *x, int *y);
+
+void player_update(Player *player);
 
 #endif

@@ -347,6 +347,53 @@ void print_player(const Player* player) {
 }
 ```
 
+### 9. Boolean Flags
+
+**Using bool for state:**
+```c
+bool just_dug = false;
+if (destination == TILE_DIRT) {
+    // Do digging work
+    just_dug = true;
+}
+
+if (just_dug) {
+    // Different behavior based on what happened
+    apply_slowdown();
+}
+```
+
+**Why use flags?**
+- Store temporary state within a function
+- Makes conditional logic clearer
+- Avoids repeating complex checks
+
+**Common pattern - action detection:**
+```c
+bool player_move(...) {
+    bool moved = false;
+    bool dug = false;
+    
+    // Try to move
+    if (can_move) {
+        // Do move
+        moved = true;
+    }
+    
+    // Try to dig
+    if (is_dirt) {
+        // Do dig
+        dug = true;
+    }
+    
+    // Apply consequences based on what happened
+    if (dug) apply_dig_cooldown();
+    if (moved) play_move_sound();
+    
+    return moved || dug;
+}
+```
+
 ## Game Programming Patterns
 
 ### 1. Game Loop
@@ -380,7 +427,211 @@ while (running) {
 cleanup();
 ```
 
-### 2. Entity-Component Pattern
+### 2. Frame-Based Timing
+
+**The problem:**
+```c
+// Button held down
+while (button_pressed) {
+    player_move();  // Moves EVERY frame!
+}
+// Player teleports across screen
+```
+
+**Solution - cooldown/delay system:**
+```c
+typedef struct {
+    int move_slowdown;  // Frames until can move again
+} Player;
+
+// When action happens
+void player_move(...) {
+    // Do the move
+    player->move_slowdown = 8;  // Wait 8 frames
+}
+
+// Every frame
+void player_update(Player* p) {
+    if (p->move_slowdown > 0) {
+        p->move_slowdown--;  // Count down
+    }
+}
+
+// When trying to act
+bool can_act(Player* p) {
+    return p->move_slowdown == 0;
+}
+```
+
+**Real-world timing examples:**
+```c
+// Fast action (3 frames @ 60 FPS = 50ms)
+player->attack_cooldown = 3;
+
+// Slow action (30 frames @ 60 FPS = 500ms)
+player->spell_cooldown = 30;
+
+// Very slow (120 frames @ 60 FPS = 2 seconds)
+player->ultimate_cooldown = 120;
+```
+
+**Multiple timers pattern:**
+```c
+typedef struct {
+    int move_cooldown;
+    int attack_cooldown;
+    int invulnerable_timer;
+    int animation_timer;
+} Player;
+
+void player_update(Player* p) {
+    // Update all timers every frame
+    if (p->move_cooldown > 0) p->move_cooldown--;
+    if (p->attack_cooldown > 0) p->attack_cooldown--;
+    if (p->invulnerable_timer > 0) p->invulnerable_timer--;
+    if (p->animation_timer > 0) p->animation_timer--;
+}
+```
+
+### 3. Context-Sensitive Actions
+
+**Different behavior based on situation:**
+```c
+bool player_move(...) {
+    TileType dest = get_tile(new_pos);
+    
+    // Same action (move), different consequences
+    if (dest == TILE_DIRT) {
+        dig_tile(new_pos);
+        move_slowdown = 8;      // Slow
+        play_dig_sound();
+    } else if (dest == TILE_TUNNEL) {
+        move_slowdown = 3;      // Fast
+        play_step_sound();
+    }
+}
+```
+
+**Why this matters:**
+- Same input → different feel based on context
+- Creates depth and strategy
+- Makes world feel interactive
+
+**Examples from games:**
+```c
+// Walking vs swimming
+if (in_water) {
+    speed = 0.5;  // Slow
+} else {
+    speed = 1.0;  // Normal
+}
+
+// Sneaking vs running
+if (crouched) {
+    speed = 0.3;   // Very slow
+    noise = 0;     // Silent
+} else {
+    speed = 1.0;   // Fast
+    noise = 1.0;   // Loud
+}
+```
+
+### 4. Game Feel Through Timing
+
+**What is "game feel"?**
+The tactile sensation of playing - how responsive and satisfying actions feel.
+
+**Bad feel - instant:**
+```c
+void player_jump() {
+    player->y = target_height;  // Teleports instantly
+}
+// Feels: Floaty, unsatisfying, cheap
+```
+
+**Good feel - weighted:**
+```c
+void player_jump() {
+    player->jump_velocity = -15;  // Initial force
+    player->jump_cooldown = 30;   // Can't jump again immediately
+}
+
+void player_update() {
+    // Gravity and physics over time
+    player->y += player->jump_velocity;
+    player->jump_velocity += GRAVITY;
+}
+// Feels: Weighty, satisfying, real
+```
+
+**Dig Dug timing example:**
+```c
+// Digging - heavy, deliberate
+if (just_dug) {
+    move_slowdown = 8;  // 133ms delay
+}
+
+// Running through tunnels - responsive
+else {
+    move_slowdown = 3;  // 50ms delay
+}
+```
+
+**Key principles:**
+- **Weight** - Actions take time
+- **Feedback** - Visual/audio confirmation
+- **Distinction** - Different actions feel different
+- **Consistency** - Similar actions feel similar
+
+### 5. State Tracking
+
+**What to track:**
+```c
+typedef struct {
+    // Position
+    int x, y;
+    
+    // Statistics
+    int score;
+    int lives;
+    int ammo;
+    
+    // Progress
+    int enemies_killed;
+    int dirt_dug;
+    int levels_completed;
+    
+    // State flags
+    bool is_invulnerable;
+    bool has_key;
+    bool is_powered_up;
+} Player;
+```
+
+**Why track state?**
+- Score and achievements
+- Unlock systems
+- Difficulty scaling
+- Player feedback
+
+**Using tracked state:**
+```c
+// Score multiplier based on depth
+int get_score(int depth, int dirt_dug) {
+    int multiplier = 1 + (depth / 5);
+    return dirt_dug * 10 * multiplier;
+}
+
+// Unlock achievement
+if (player->dirt_dug >= 1000) {
+    unlock_achievement("Mole Master");
+}
+
+// Scale difficulty
+int enemy_count = 3 + (player->level / 2);
+```
+
+### 6. Entity-Component Pattern
 
 **Entity:** Game object
 **Component:** Data that describes the entity
@@ -406,7 +657,7 @@ void render_sprite(Sprite* sprite, Position* pos) {
 }
 ```
 
-### 3. Separation of Concerns
+### 7. Separation of Concerns
 
 **Each module has ONE job:**
 ```
@@ -450,7 +701,45 @@ void render_player(Player* player) {
 }
 ```
 
-### 4. Data-Driven Design
+### 8. Rule-Based Mechanics
+
+**Adding constraints creates gameplay:**
+```c
+bool can_move_to(int x, int y, Direction dir) {
+    TileType tile = get_tile(x, y);
+    
+    // Rule 1: Can't walk through walls
+    if (tile == TILE_WALL) return false;
+    
+    // Rule 2: Can't dig upward
+    if (tile == TILE_DIRT && dir == DIR_UP) return false;
+    
+    // Rule 3: Need key for doors
+    if (tile == TILE_DOOR && !player.has_key) return false;
+    
+    return true;
+}
+```
+
+**Why rules matter:**
+- Create puzzles and challenges
+- Force strategic thinking
+- Make world feel consistent
+- Limit player power
+
+**Examples from games:**
+```c
+// Zelda: Need specific item for obstacle
+if (obstacle == BOMB_WALL && !has_bombs) return false;
+
+// Mario: Can't break brick without power-up
+if (block == BRICK && player.size == SMALL) return false;
+
+// Dig Dug: Can't dig upward (this project!)
+if (tile == TILE_DIRT && dir == DIR_UP) return false;
+```
+
+### 9. Data-Driven Design
 
 **Code-driven (hard-coded):**
 ```c
@@ -479,7 +768,7 @@ load_level_from_file("level1.txt");
 - Level designers can work independently
 - Easy to add content
 
-### 5. State Machines
+### 10. State Machines
 
 **Game states:**
 ```c
@@ -668,6 +957,10 @@ free(ptr);  // ERROR: Double free
 printf("DEBUG: x = %d, y = %d\n", x, y);
 printf("DEBUG: Entering function\n");
 printf("DEBUG: condition = %s\n", condition ? "true" : "false");
+
+// Debug timing
+printf("DEBUG: slowdown = %d\n", player->move_slowdown);
+printf("DEBUG: just_dug = %s\n", just_dug ? "true" : "false");
 ```
 
 ### Assert
@@ -677,6 +970,7 @@ printf("DEBUG: condition = %s\n", condition ? "true" : "false");
 assert(player != NULL);
 assert(x >= 0 && x < GRID_WIDTH);
 assert(score >= 0);
+assert(move_slowdown >= 0);  // Never negative
 ```
 
 Crashes if condition is false - catches bugs early!
@@ -695,6 +989,7 @@ gdb ./main
 (gdb) next              # Next line
 (gdb) step              # Step into function
 (gdb) print x           # Print variable
+(gdb) print player->move_slowdown  # Print struct field
 (gdb) continue          # Continue execution
 (gdb) quit              # Exit GDB
 ```
@@ -704,9 +999,14 @@ gdb ./main
 ✅ Pointers store memory addresses  
 ✅ Structs group related data  
 ✅ Enums replace magic numbers  
+✅ Boolean flags track temporary state  
 ✅ Header guards prevent double-inclusion  
 ✅ Static limits scope  
 ✅ Game loop: Input → Update → Render  
+✅ Frame-based timing creates game feel  
+✅ Context-sensitive actions add depth  
+✅ State tracking enables progression  
+✅ Rule-based mechanics create challenge  
 ✅ Separate concerns into modules  
 ✅ Compilation: source → object → executable  
 ✅ Stack for local, heap for dynamic  

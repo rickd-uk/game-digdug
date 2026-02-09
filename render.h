@@ -17,4 +17,6 @@ void render_draw_grid(SDL_Renderer *renderer,
 // draw player
 void render_draw_player(SDL_Renderer *renderer, Player *player);
 
+void render_draw_hud(SDL_Renderer *renderer, Player *player);
+
 #endif

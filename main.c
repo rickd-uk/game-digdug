@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     }
 
     // ========= UPDATE (game Logic) ===========
-
+    player_update(&player);
     // ========= RENDER ========================
 
     // clear screen with a color (R,G,B,A)
@@ -83,6 +83,9 @@ int main(int argc, char *argv[]) {
 
     // Draw player on top
     render_draw_player(renderer, &player);
+
+    // Draw HUD - dirt bar
+    render_draw_hud(renderer, &player);
 
     // Present
     SDL_RenderPresent(renderer);

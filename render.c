@@ -108,3 +108,20 @@ void render_draw_player(SDL_Renderer *renderer, Player *player) {
   SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
   SDL_RenderFillRect(renderer, &dir_indicator);
 }
+
+void render_draw_hud(SDL_Renderer *renderer, Player *player) {
+  // draw a simple dir counter as colored bars
+  // Each 10 pieces of dirt = 1 bar
+  int bars = player->dirt_dug / 10;
+
+  SDL_FRect bar;
+  bar.w = 20;
+  bar.h = 10;
+  bar.y = 5;
+
+  for (int i = 0; i < bars && i < 30; i++) {
+    bar.x = 5 + (i * 22);
+    SDL_SetRenderDrawColor(renderer, 139, 69, 139, 255); // dirt brown
+    SDL_RenderFillRect(renderer, &bar);
+  }
+}
