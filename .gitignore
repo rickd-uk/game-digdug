@@ -1,3 +1,17 @@
-digdug
+# Build artifacts
 *.o
+digdug
 
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.dSYM/
